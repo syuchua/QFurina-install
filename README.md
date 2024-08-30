@@ -15,6 +15,7 @@ bash <(curl -s https://raw.githubusercontent.com/syuchua/QFurina-install/main/in
 
 ```bash
 bash <((wget -qO- https://raw.githubusercontent.com/syuchua/QFurina-install/main/install.sh)
+```
 
 
 运行这个命令后，按照脚本的提示进行操作即可完成安装和配置。
