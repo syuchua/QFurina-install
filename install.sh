@@ -63,40 +63,42 @@ clone_repository() {
     echo -e "${GREEN}项目仓库克隆完成${NC}"
 }
 
+configure_qq_bot() {
+    echo -e "${YELLOW}正在配置 QQ 机器人...${NC}"
+    read -p "请输入 QQ 机器人账号: " qq_account
+    sed -i "s/ACCOUNT=.*/ACCOUNT=$qq_account/" docker-compose.yaml
+    echo -e "${GREEN}QQ 机器人配置完成${NC}"
+}
+
 configure_model() {
     echo -e "${YELLOW}开始配置模型...${NC}"
     echo "请选择要使用的模型类型:"
-    echo "1) GPT 系列"
-    echo "2) 其他模型"
-    read -p "请输入选项 (1/2): " model_choice
+    echo "1) Claude"
+    echo "2) Moonshot"
+    echo "3) Deepseek"
+    echo "4) ChatGlm"
+    echo "5) Gemini"
+    echo "6) Llama"
+    echo "7) GPT-4o"
+    echo "8) 其他模型"
+    read -p "请输入选项 (1-8): " model_choice
 
     case $model_choice in
-        1)
-            read -p "请输入 OpenAI API Key: " api_key
-            read -p "请输入 API Base URL (默认为 https://api.openai.com/v1): " base_url
-            base_url=${base_url:-https://api.openai.com/v1}
-            echo "请选择 GPT 模型:"
-            echo "1) gpt-3.5-turbo (默认)"
-            echo "2) gpt-4"
-            echo "3) 其他"
-            read -p "请输入选项 (1/2/3): " gpt_model_choice
-            case $gpt_model_choice in
-                1) model="gpt-3.5-turbo" ;;
-                2) model="gpt-4" ;;
-                3) read -p "请输入模型名称: " model ;;
-                *) model="gpt-3.5-turbo" ;;
-            esac
-            ;;
-        2)
-            read -p "请输入模型名称: " model
-            read -p "请输入 API Key: " api_key
-            read -p "请输入 API Base URL: " base_url
-            ;;
-        *)
+        1) model_type="claude" ;;
+        2) model_type="moonshot" ;;
+        3) model_type="deepseek" ;;
+        4) model_type="ChatGlm" ;;
+        5) model_type="Gemini" ;;
+        6) model_type="llama" ;;
+        *) 
             echo -e "${RED}无效的选项${NC}"
             exit 1
             ;;
     esac
+
+    read -p "请输入 API Key: " api_key
+    read -p "请输入 API Base URL: " base_url
+    read -p "请输入模型名称: " model
 
     echo -e "${GREEN}模型配置完成${NC}"
 }
@@ -110,20 +112,15 @@ update_config_files() {
     jq ".api_key = \"$api_key\" | .model = \"$model\" | .proxy_api_base = \"$base_url\"" $config_file > tmp.$$.json && mv tmp.$$.json $config_file
 
     # 更新 model.json
-    if [ "$model_choice" == "1" ]; then
-        jq ".models.gpt = {\"api_key\": \"$api_key\", \"base_url\": \"$base_url\", \"args\": {}, \"timeout\": 120, \"available_models\": [\"$model\"]} | .model = \"$model\" | .vision = true" $model_file > tmp.$$.json && mv tmp.$$.json $model_file
+    if jq -e ".models[\"$model_type\"].available_models | index(\"$model\")" $model_file > /dev/null; then
+        # 如果模型已存在，更新现有配置
+        jq ".models[\"$model_type\"].api_key = \"$api_key\" | .models[\"$model_type\"].base_url = \"$base_url\" | .model = \"$model\"" $model_file > tmp.$$.json && mv tmp.$$.json $model_file
     else
-        jq ".models[\"$model\"] = {\"api_key\": \"$api_key\", \"base_url\": \"$base_url\", \"args\": {}, \"timeout\": 120, \"available_models\": [\"$model\"]} | .model = \"$model\" | .vision = true" $model_file > tmp.$$.json && mv tmp.$$.json $model_file
+        # 如果模型不存在，添加新的配置
+        jq ".models[\"$model_type\"] = {\"api_key\": \"$api_key\", \"base_url\": \"$base_url\", \"args\": {}, \"timeout\": 120, \"available_models\": [\"$model\"]} | .model = \"$model\"" $model_file > tmp.$$.json && mv tmp.$$.json $model_file
     fi
 
     echo -e "${GREEN}配置文件更新完成${NC}"
-}
-
-configure_qq_bot() {
-    echo -e "${YELLOW}正在配置 QQ 机器人...${NC}"
-    read -p "请输入 QQ 机器人账号: " qq_account
-    sed -i "s/ACCOUNT=3836751864/ACCOUNT=$qq_account/" docker-compose.yaml
-    echo -e "${GREEN}QQ 机器人配置完成${NC}"
 }
 
 start_services() {
@@ -134,8 +131,7 @@ start_services() {
 
 show_qr_code() {
     echo -e "${YELLOW}正在获取登录二维码...${NC}"
-    echo "请使用以下命令查看 napcat 日志以获取登录二维码:"
-    echo -e "${GREEN}docker logs napcat${NC}"
+    docker logs napcat
 }
 
 # 主程序
