@@ -125,7 +125,7 @@ update_config_files() {
 
 start_services() {
     echo -e "${YELLOW}正在启动服务...${NC}"
-    docker-compose up -d
+    docker compose up -d
     echo -e "${GREEN}服务启动完成${NC}"
 }
 
